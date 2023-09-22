@@ -1,0 +1,311 @@
+---
+title: '2501967096_MidExam'
+author: "Ryan Bertrand"
+date: '2022-04-02'
+output: html_document
+---
+
+
+##### **1. Apply the following exploratory data analysis techniques using R on `CarPrice` dataset: (25 pts.)**
+
+a.	Using `mfrow` parameter, construct a two-by-two plot array showing the concentrations of the following four attributes versus the record number in the dataset: 
+
+(1) Wheelbase, top left; 
+(2) carwidth, top right; 
+(3) fueltype, lower left; and 
+(4) CylinderNumber, lower right. 
+
+In all cases, the x-axis label should read `Record number in dataset` and the y-axis should read the attribute. 
+Each plot should have a title spelling out the name of the element on which the attribute is based (e.g., “wheelbase” for the top-left plot).
+```{r}
+data<- read.csv(file = 'CarPrice-EvenSID.csv')
+#View(data)
+par(mfrow=c(2,2))
+data$row_num <- seq.int(nrow(data)) 
+data$FuelType <- as.factor(data$FuelType)
+data[data$CylinderNumber=="two",]$CylinderNumber<-2
+data[data$CylinderNumber=="three",]$CylinderNumber<-3
+data[data$CylinderNumber=="four",]$CylinderNumber<-4
+data[data$CylinderNumber=="five",]$CylinderNumber<-5
+data[data$CylinderNumber=="six",]$CylinderNumber<-6
+data[data$CylinderNumber=="eight",]$CylinderNumber<-8
+data[data$CylinderNumber=="twelve",]$CylinderNumber<-12
+plot(data$row_num, data$WheelBase, xlab="index", ylab="wheel base")
+title("Wheel Base")
+plot(data$row_num, data$CarWidth, xlab="index", ylab="car width")
+title("Car Width")
+plot(data$row_num, data$FuelType, xlab="index", ylab="fuel type", yaxt="n")
+axis(2, at = seq(1,2,1), labels = levels(data$FuelType))
+title("Fuel Type")
+plot(data$row_num, data$CylinderNumber, xlab="index", ylab="cylinder number")
+title("Cylinder Number")
+```
+
+```
+__Write your explanation here:__
+Plot di atas menjelaskan bahwa:
+* Panjang wheel base pada mobil yaitu mulai dari 86,6 inch sampai dengan 120,9 inch tetapi rata-rata wheel base yang digunakan oleh mobil yaitu 90-100 inch
+* Lebar mobil pada mobil yaitu mulai dari 60 inch sampai dengan 72 inch tetapi rata-rata lebar mobil yang digunakan pada mobil yaitu 64-69 inch
+* Bahan bakar yang digunakan oleh mobil yaitu gas dan diesel, tetapi hampir semua mobil memakai bahan bakar gas dan sisanya memakai diesel
+* Mobil memiliki 7 macam silinder: 2 silinder, 3 silinder, 4 silinder, 5 silinder, 6 silinder, 8 silinder ,dan 12 silinder, tetapi kebanyakan mobil memakai 4 silender
+```
+
+ b.	Construct a mosaic plot showing the relationship between the variables `Carbody` and `CylinderNumber` in the `CarPrice` data frame. Does this plot suggest a relationship between these variables? Explain your answer.
+```{r}
+#write your code here
+MosaicPlot <-table(data$CarBody,data$CylinderNumber)
+mosaicplot(MosaicPlot)
+```
+
+```
+__Write your explanation here:__
+Dari mosaic plot diatas dapat disimpulkan bahwa:
+* Tipe mobil convertible tidak memiliki mesin yang bersilinder 2, 3, 5, dan 12, tetapi memiliki mesin bersilinder 4, 6, dan 8
+* Tipe mobil hardtop tidak memiliki mesin yang bersilinder 2, 3, dan 12, tetapi memiliki mesin bersilinder 4, 5, 6 ,dan 8
+* Tipe mobil hatchback hanya tidak memiliki mesin yang bersilinder 12, tetapi memiliki mesin bersilinder 2, 3, 4, 5, 6, dan 8
+* Tipe mobil sedan tidak memiliki mesin yang bersilinder 2 dan 3, tetapi memiliki mesin bersilinder 4, 5, 6, 8, dan 12
+* Tipe mobil wagon tidak memiliki mesin yang bersilinder 2, 3, 8, dan 12, tetapi memiliki mesin bersilinder 4, 5, dan 6
+* Dari semua tipe mobil mesin 4 silinder adalah mesin yang paling banyak untuk dipakai
+```
+
+c.	Compute the correlation for all attributes. Interpret the statistical findings!
+```{r}
+#write your code here
+library(Hmisc)
+dataAngka <- data[,c("WheelBase","CarWidth","CurbWeight","CylinderNumber","HorsePower","Citympg","Price")]
+rcorr(as.matrix(dataAngka), type = "spearman")
+```
+
+```
+__Write your explanation here:__
+Dari data di atas kita dapat mengetahui korelasi yang paling tinggi yaitu antara Price dengan CurbWeight yaitu nilainya 0.91
+```
+
+##### **2. You need to compare three ways (three-sigma edit rule, Hampel identifier, boxplot rule) of detecting univariate outliers for the `wheelbase` attribute from the data frame: (20 pts.)**
+
+a.	Generate a plot for each technique and give the appropriate features (labels, line type, etc.). Based on these plots, which outlier detector seems to be giving the more reasonable results?
+```{r}
+#write your code here
+ThreeSigma <- function(x, t = 3){
+
+   mu <- mean(x, na.rm = TRUE)
+   sig <- sd(x, na.rm = TRUE)
+   if (sig == 0){
+      message("All non-missing x-values are identical")
+   }
+  up <- mu + t * sig
+  down <- mu - t * sig
+  out <- list(up = up, down = down)
+  return(out)
+}
+
+Hampel <- function(x, t = 3){
+
+   mu <- median(x, na.rm = TRUE)
+   sig <- mad(x, na.rm = TRUE)
+   if (sig == 0){
+        message("Hampel identifer implosion: MAD scale estimate is zero")
+   }
+   up <- mu + t * sig
+   down <- mu - t * sig
+   out <- list(up = up, down = down)
+   return(out)
+}
+   
+BoxplotRule<- function(x, t = 1.5){
+
+ xL <- quantile(x, na.rm = TRUE, probs = 0.25, names = FALSE)
+ xU <- quantile(x, na.rm = TRUE, probs = 0.75, names = FALSE)
+ Q <- xU - xL
+ if (Q == 0){
+ message("Boxplot rule implosion: interquartile distance is zero")
+ }
+ up <- xU + t * Q
+ down <- xU - t * Q
+ out <- list(up = up, down = down)
+ return(out)
+}   
+
+ExtractDetails <- function(x, down, up){
+
+ outClass <- rep("N", length(x))
+ indexLo <- which(x < down)
+ indexHi <- which(x > up)
+ outClass[indexLo] <- "L"
+ outClass[indexHi] <- "U"
+ index <- union(indexLo, indexHi)
+ values <- x[index]
+ outClass <- outClass[index]
+ nOut <- length(index)
+ outList <- list(nOut = nOut, lowLim = down,
+ upLim = up,index = index,
+ values = values,
+ outClass = outClass)
+ return(outList)
+}
+
+
+FindOutliers <- function(x, t3 = 3, tH = 3, tb = 1.5){
+ threeLims <- ThreeSigma(x, t = t3)
+ HampLims <- Hampel(x, t = tH)
+ boxLims <- BoxplotRule(x, t = tb)
+
+ n <- length(x)
+ nMiss <- length(which(is.na(x)))
+
+ threeList <- ExtractDetails(x, threeLims$down, threeLims$up)
+ HampList <- ExtractDetails(x, HampLims$down, HampLims$up)
+ boxList <- ExtractDetails(x, boxLims$down, boxLims$up)
+
+ sumFrame <- data.frame(method = "ThreeSigma", n = n,
+ nOut = threeList$nOut,
+ lowLim = threeList$lowLim,
+ upLim = threeList$upLim)
+ 
+ upFrame <- data.frame(method = "Hampel", n = n,
+ nOut = HampList$nOut,
+ lowLim = HampList$lowLim,
+ upLim = HampList$upLim)
+ 
+ sumFrame <- rbind.data.frame(sumFrame, upFrame)
+ 
+ upFrame <- data.frame(method = "BoxplotRule", n = n,
+ nOut = boxList$nOut,
+ lowLim = boxList$lowLim,
+ upLim = boxList$upLim)
+ 
+ sumFrame <- rbind.data.frame(sumFrame, upFrame)
+
+ threeFrame <- data.frame(index = threeList$index,
+ values = threeList$values,
+ type = threeList$outClass)
+ HampFrame <- data.frame(index = HampList$index,
+ values = HampList$values,
+ type = HampList$outClass)
+ boxFrame <- data.frame(index = boxList$index,
+ values = boxList$values,
+ type = boxList$outClass)
+ outList <- list(summary = sumFrame, threeSigma = threeFrame,
+ Hampel = HampFrame, boxplotRule = boxFrame)
+ return(outList)
+}
+```
+
+```{r}
+fullSummary <- FindOutliers(data$WheelBase)
+plot(data$WheelBase,ylim=c(80,125),xlim=c(0,200))
+title("three sigma with low and high limit")
+axis(1, at=seq(0,200,25))
+axis(2, at=seq(80,120,5))
+lowlim3s <-fullSummary$summary[1 , 4]
+highlim3s <-fullSummary$summary[1 , 5]
+abline(h = lowlim3s, col="green") 
+abline(h = highlim3s, col="red")
+
+plot(data$WheelBase,ylim=c(80,125),xlim=c(0,200))
+title("hample with low and high limit")
+axis(1, at=seq(0,200,25))
+axis(2, at=seq(80,120,5))
+lowlimh <-fullSummary$summary[2 , 4]
+highlimh <-fullSummary$summary[2 , 5]
+abline(h = lowlimh, col="green") 
+abline(h = highlimh, col="red")
+
+plot(data$WheelBase,ylim=c(80,125),xlim=c(0,200))
+title("bloxplot rule with low and high limit")
+axis(1, at=seq(0,200,25))
+axis(2, at=seq(80,120,5))
+lowlimb <-fullSummary$summary[3 , 4]
+highlimb <-fullSummary$summary[3 , 5]
+abline(h = lowlimb, col="green") 
+abline(h = highlimb, col="red")
+
+#lowlim3s -> untuk mengetahui lower limit dari three sigma
+#highlim3s -> untuk mengetahui higher limit dari three sigma
+#lowlimh -> untuk mengetahui lower limit dari hample
+#highlimh -> untuk mengetahui higher limit dari hample
+#lowlimb -> untuk mengetahui lower limit dari boxplot rule
+#highlimb -> untuk mengetahui higher limit dari boxplotrule
+```
+
+```
+__Write your explanation here:__ #blm pasti bener explainnya
+Dari 3 plot diatas kita dapat mengetahui, jika menggunakan rumus:
+* Three Sigma: lower limitnya adalah 80.69126, dan higher limitnya adalah 116.8219
+* Hample: lower limitnya adalah 84.99094, dan higher limitnya adalah 109.0091
+* Box Plot Rule: lower limitnya adalah 90.55, dan higher limitnya adalah 114.25
+```
+
+b.	How many data points are declared outliers by each of the technique? Based on this data points, which outlier detector seems to be giving the more reasonable results?
+```{r}
+#write your code here
+i<-1
+while(i <= 3){
+  hasil<-paste(fullSummary$summary[i , 1],"=", fullSummary$summary[i , 3])
+  i <- i + 1
+  print(hasil)
+}
+```
+
+```
+__Write your explanation here:__
+Outlier yang dapat ditemukan dengan menggunakan ThreeSigma yaitu hanya 1 outlier, Hample memiliki 18 outlier, dan BoxplotRule memiliki 11 outlier
+```
+
+##### **3. Do a comprehensive EDA on your dataset then find the best-fit linear regression model then answer the following questions: (40 pts.)**
+
+a.	Interpret the result of your model.
+```{r}
+#write your code here
+perbandingan <- lm(log(Price)~CurbWeight,data=data)
+plot(perbandingan, which=1)
+```
+
+```
+__Write your explanation here:__
+Dari plot ini dapat menentukan apakah kasus-kasus berpengaruh untuk model ini, dan dapat mencari nilai outlying.
+```
+
+b.	Write down the equation of the best fitting line.
+```{r}
+#write your code here
+summary(perbandingan)
+```
+
+```
+__Write your explanation here:__
+Dari summary ini kita dapat mengetahui F Statistik meningkat menjadi 783,9 dan memiliki p value yang sangat signifikan
+```
+
+c.	Is your model good? Why or why not?
+```{r}
+#write your code here
+library(caret)
+set.seed(1)
+validation_index <- createDataPartition(data$Price, p=0.8, list = FALSE)
+validationset = data[-validation_index,]
+validationset$predicted <- predict(perbandingan, validationset)
+actualPrediction <- data.frame(validationset$Price, validationset$predicted, validationset$Price - validationset$predicted)
+names(actualPrediction) <- c ("Price", "Predicted", "Residuals")
+correlationAccuracy <- cor(actualPrediction)
+correlationAccuracy
+```
+
+```
+__Write your explanation here:__
+model yang saya buat sudah bagus karena model dari correlation menunjukkan nilai akurasi 86% 
+```
+d.	Based on your answer in c, will you deploy the model? Why or why not?
+```{r}
+#write your code here
+trainingset = data[validation_index,]
+prediction <- predict(perbandingan, validationset)
+plot(exp(prediction), validationset$Price, xlab="Predicted Price", ylab="Actual Price")
+title("Predicted Price vs Actual Price")
+abline(a=0, b=1)
+```
+
+```
+__Write your explanation here:__
+Model yang saya buat sudah baik karena dibuktikan didalam plot "Predicted Price vs Actual Price" hanya ada 1 data yang tidak mendekati garis lainnya mendekati garis semua
+```

@@ -1,0 +1,350 @@
+---
+title: "2501967096_FinalExam"
+author: "2501967096_RyanBertrand"
+date: '2022-07-11'
+output: html_document
+---
+
+
+```{r}
+data <- read.csv("StrokeData.csv")
+print("Dimensi data Row x Column")
+dim(data)
+print("Kolom yang ada : ")
+names(data)
+```
+__EXPLANATION__
+Melihat jumlah baris dan jumlah kolom data stroke.
+Melihat nama kolom/atribut dari data stroke pada dataset data.
+
+```{r}
+str(data)
+```
+__EXPLANATION__
+- Melihat nama kolom/atribute, tipe data serta nilai-nilai yang ada pada setiap kolomnya.
+- Pada bmi terdapat character N/A, sehingga perlu untuk ditindak lanjuti.
+
+```{r}
+BasicSummary <- function(df, dgts = 3){
+m <- ncol(df)
+varNames <- colnames(df)
+varType <- vector("character",m)
+topLevel <- vector("character",m)
+topCount <- vector("numeric",m)
+missCount <- vector("numeric",m)
+levels <- vector("numeric", m)
+
+for (i in 1:m){
+x <- df[,i]
+varType[i] <- class(x)
+xtab <- table(x, useNA = "ifany")
+levels[i] <- length(xtab)
+nums <- as.numeric(xtab)
+maxnum <- max(nums)
+topCount[i] <- maxnum
+maxIndex <- which.max(nums)
+lvls <- names(xtab)
+topLevel[i] <- lvls[maxIndex]
+missIndex <- which((is.na(x)) | (x == "") | (x == " "))
+missCount[i] <- length(missIndex)
+}
+n <- nrow(df)
+topFrac <- round(topCount/n, digits = dgts)
+missFrac <- round(missCount/n, digits = dgts)
+
+summaryFrame <- data.frame(variable = varNames, type = varType,
+ levels = levels, topLevel = topLevel,
+ topCount = topCount, topFrac = topFrac,
+ missFreq = missCount, missFrac = missFrac)
+ return(summaryFrame)
+}
+
+BasicSummary(data)
+```
+__EXPLANATION__
+Fungsi mempersiapkan tentang ringkasan data meliputi nama variabel, tipe data, level, top level, top count, top fraction, missing freq dan missing fraction.
+
+```{r}
+colSums(is.na(data))
+```
+__EXPLANATION__
+Pada dataset data ini tidak mempunyai missing value tetapi bmi memiliki nilai N/A sehingga perlu ditindak lanjuti lagi.
+
+```{r}
+sapply(data,function(x) length(unique(x)))
+```
+__EXPLANATION__
+- Pada analisa kolom id ini adalah data unique dari setiap data, jadi tidak diperlukan untuk kepentingan analisa berikutnya.
+- Pada kolom yang lain diperlukan untuk diuji lebih lanjut.
+
+```{r}
+stroke = subset(data, select = -c(id))
+suppressWarnings(stroke$bmi <- as.numeric(as.character(stroke$bmi)))
+colSums(is.na(stroke))
+```
+__EXPLANATION__
+- Menindak lanjuti dari analisa sebelumnya kolom id dihapus karena semua datanya unique.
+- Pada kolom bmi dianalisa ada character N/A, dan perlu dibuat menjadi n/a yang berarti null pada kolom.
+- sehingga pada kolom bmi ini ternyata terdapat 201 data yang n/a, sehingga perlu ditindak lanjuti.
+
+```{r}
+library(tidyr)
+bmi.median = median(stroke$bmi, na.rm = TRUE)
+stroke$bmi <- stroke$bmi%>%replace_na(bmi.median)
+colSums(is.na(stroke))
+```
+__EXPLANATION__
+Menindak lanjuti kolom bmi ini dimana terdapat 201 data yang n/a,:
+1. Jika dihapus akan berpengaruh, karena jumlahnya relatif banyak yaitu 201 data.
+2. Sehingga digunakan nilai median untuk mengisi nilai bmi.
+3. Dilakukan pengecekan apakah masih terdapat nilai n/a, dan ternyata semua data sudah bersih.
+
+```{r}
+as.data.frame(table(stroke$gender))
+```
+__EXPLANATION__
+- Pada data yang bersifat kategorikal seperti gender, perlu dilakukan pengamatan.
+- Pada pengamatan ini terdapat nilai other dimana gender other ini hanya 1 baris data.
+- Pada nilai other ini dipertimbangkan untuk dihapus karena jumlah sedikit dan tidak terpengaruh pada data dan jika tidak dihapus akan mempengaruh analisa lebih lanjut.
+
+```{r}
+stroke = stroke[!stroke$gender == 'Other',]
+```
+__EXPLANATION__
+Pada proses ini dilakukan penghapusan data, dengan memilih data yang bukan 'Other' dan disimpan pada dataset stroke.
+
+```{r}
+as.data.frame(table(stroke$work_type))
+```
+__EXPLANATION__
+Pada data yang bersifat kategorikal seperti work_type, perlu dilakukan pengamatan
+Pada pengamatan ini tidak terdapat data yang perlu ditindaklanjuti.
+
+```{r}
+as.data.frame(table(stroke$Residence_type))
+```
+__EXPLANATION__
+Pada data yang bersifat kategorikal seperti residence_type, perlu dilakukan pengamatan
+Pada pengamatan ini tidak terdapat data yang perlu ditindaklanjuti.
+
+```{r}
+as.data.frame(table(stroke$ever_married))
+```
+__EXPLANATION__
+Pada data yang bersifat kategorikal seperti residence_type, perlu dilakukan pengamatan
+Pada pengamatan ini tidak terdapat data yang perlu ditindaklanjuti.
+
+```{r}
+as.data.frame(table(stroke$smoking_status))
+```
+__EXPLANATION__
+Pada data yang bersifat kategorikal seperti smoking_status, perlu dilakukan pengamatan
+Terdapat data unknown, data ini relative besar, jadi perlu dilakukan tindakan.
+
+```{r}
+library(dplyr)
+stroke <- stroke %>% mutate(smoking_status = replace(smoking_status, smoking_status == "Unknown", "never smoked"))
+```
+__EXPLANATION__
+Pada data smoking_status yaitu Unknown, sebaiknya dikategorikan menjadi never smoke dengan pertimbangan kebanyakan data yang ada yaitu never smoked dan jika dilihat dari umur survey juga bermulai dari bayi, sehingga lebih baik kategori unknown dijadikan never smoked.
+
+```{r}
+as.data.frame(table(stroke$smoking_status))
+```
+__EXPLANATION__
+Sesudah dilakukan proses perubahan maka dilakukan proses melihat kondisi data yang baru pada kolom smoking status.
+
+```{r}
+library(data.table)
+stroke1 <- copy(stroke)
+
+stroke$stroke <- as.factor(stroke$stroke)
+stroke$hypertension <- as.factor(stroke$hypertension)
+stroke$heart_disease <- as.factor(stroke$heart_disease)
+stroke$ever_married <- as.factor(stroke$ever_married)
+stroke$Residence_type <- as.factor(stroke$Residence_type)
+
+levels(stroke$stroke) <- c("No","Yes")
+levels(stroke$hypertension) <- c("No","Yes")
+levels(stroke$heart_disease) <- c("No","Yes")
+
+stroke %>% head()
+```
+__EXPLANATION__
+- Terdapat data yang perlu difactorkan yaitu stroke, hypertension, heart_disease, ever_married, dan residence_type
+- Pada kolom stroke, hypertension dan heart_disesase dilevekan No dan Yes
+
+```{r}
+library(fastDummies)
+stroke_dummy <- dummy_cols(stroke,select_columns = c("gender","work_type","smoking_status"), remove_first_dummy = TRUE, remove_selected_columns = TRUE)
+stroke_dummy %>% head()
+```
+__EXPLANATION__
+- Dilakukan proses pembentukan multilevel variabel, dan diletakkan pada variabel dataframe stroke_dummy, sehingga data yang diperoleh adalah 1 dan 0 untuk setiap nilai kategorikal pada suatu kolom yang dipilih
+
+```{r}
+summary(stroke_dummy)
+```
+__EXPLANATION__
+- Melihat nilai summary min, 1st quarter, median, mean, 3rd quarter, dan max di data bertipe numeric.
+- Melihat jumlah tiap data yang ada di data bertipe kategorical.
+
+```{r}
+library(ggplot2)
+p1 <- ggplot(data = stroke) +geom_bar(mapping = aes(x = gender)) +labs(title='The Amount of Data in Each Gender Category')
+p2 <-ggplot(data = stroke) +geom_bar(mapping = aes(x = hypertension)) +labs(title='The Amount of Data in Each Hypertension Category')
+p3 <-ggplot(data = stroke) +geom_bar(mapping = aes(x = heart_disease)) +labs(title='The Amount of Data in Each Heart Disease Category')
+p4 <-ggplot(data = stroke) +geom_bar(mapping = aes(x = ever_married)) +labs(title='The Amount of Data in Each Ever Married Category')
+p5 <-ggplot(data = stroke) +geom_bar(mapping = aes(x = work_type)) +labs(title='The Amount of Data in Each Work Type Category')
+p6 <-ggplot(data = stroke) +geom_bar(mapping = aes(x = Residence_type)) +labs(title='The Amount of Data in Each Residence Type Category')
+p7 <-ggplot(data = stroke) +geom_bar(mapping = aes(x = smoking_status)) +labs(title='The Amount of Data in Each Smoking Status Category')
+p8 <-ggplot(data = stroke) +geom_bar(mapping = aes(x = stroke)) +labs(title='The Amount of Data in Each Stroke Category')
+p1
+p2
+p3
+p4
+p5
+p6
+p7
+p8
+```
+__EXPLANATION__
+Melihat jumlah total setiap data yang ada pada setiap kolom dalam barchart.
+
+```{r}
+library(gridExtra)
+c1 <- ggplot(data = stroke) + geom_histogram(mapping = aes(x = age), binwidth = 0.5, col = 'cyan')
+c2 <- ggplot(data = stroke) + geom_histogram(mapping = aes(x = avg_glucose_level), binwidth = 0.5, col = 'pink')
+c3 <- ggplot(data = stroke) + geom_histogram(mapping = aes(x = bmi), binwidth = 0.5, col = 'green')
+grid.arrange(c1,c2,c3, ncol= 2)
+```
+__EXPLANATION__
+Dari plot diatas kita dapat mengetahui distribusi data bmi hampir menyerupai seperti distribusi normal.
+
+```{r}
+ggplot(data = stroke, mapping = aes(x = stroke, y = age)) +geom_boxplot()+labs(title='Stroke on Age')
+ggplot(data = stroke, mapping = aes(x = stroke, y = avg_glucose_level)) +geom_boxplot()+labs(title='Stroke on Glucose Level')
+ggplot(data = stroke, mapping = aes(x = stroke, y = bmi)) +geom_boxplot()+labs(title='Stroke on bmi')
+```
+__EXPLANATION__
+Dari boxplot ini kita dapat mengetahui bahwa:
+- Terdapat outlier pada age diatas 0 sampai dibawah 20 di dalam boxplot "Stroke on Age".
+- Terdapat outlier pada avg glocose level diatas 150 sampai dibawah 300 di dalam boxplot "Stroke on Glucose Level".
+- Terdapat outlier pada bmi diatas 37,5 sampai dibawah 100 dan ada juga outlier yang berada dibawah 25 di dalam boxplot "Stroke on bmi".
+
+```{r}
+stroke1$Residence_type[stroke1$Residence_type == "Urban"] <- 0
+stroke1$Residence_type[stroke1$Residence_type == "Rural"] <- 1
+
+stroke1$ever_married[stroke1$ever_married == "Yes"] <- 1
+stroke1$ever_married[stroke1$ever_married == "No"] <- 0
+
+stroke1$gender[stroke1$gender == "Male"] <- 0
+stroke1$gender[stroke1$gender == "Female"] <- 1
+
+suppressWarnings(stroke1$Residence_type <- as.numeric(as.character(stroke1$Residence_type)))
+suppressWarnings(stroke1$ever_married <- as.numeric(as.character(stroke1$ever_married)))
+suppressWarnings(stroke1$gender <- as.numeric(as.character(stroke1$gender)))
+
+stroke1.quant = subset(stroke1, select = -c(work_type, smoking_status))
+stroke1.cor = round(cor(stroke1.quant),2)
+ggplot(data = reshape2::melt(stroke1.cor),aes(x=Var1, y=Var2, fill=value)) + geom_tile() +  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0, limit = c(-1,1), space = "Lab", name="Pearson\nCorrelation") + geom_text(aes(Var2, Var1, label = value), color = "black", size = 4) + theme(axis.text.x = element_text(angle = 30))
+```
+__EXPLANATION__
+Dari gambar diatas kita dapat mengetahui korelasi yang paling besar yaitu age dan ever_married yang nilainya 0.68.
+
+```{r}
+library(caret)
+set.seed(100)
+prosentaseTraining = 0.85
+all_train_data <- createDataPartition(y = stroke$stroke, p = prosentaseTraining, list = FALSE)
+training <- stroke[all_train_data,]
+validation <- stroke[-all_train_data,]
+print("Jumlah Row Training : ")
+nrow(training)
+print("Jumlah Row Validation : ")
+nrow(validation)
+print("Jumlah Orang yang Terkena Stroke : ")
+nrow(filter(training,stroke=="Yes"))
+```
+__EXPLANATION__
+- Jumlah row training yaitu 85% dari data stroke.
+- Jumlah row validation yaitu 15% (100%-85%) dari data stroke.
+- Jumlah orang yang terkena stroke setelah diambil acak menggunakan set.seed(100) dan dari data stroke yaitu jumlahnya 212.
+
+```{r}
+model <- glm(stroke ~.,family=binomial(link='logit'), data=training)
+summary(model)
+```
+__EXPLANATION__
+Dari tabel diatas kita dapat mengetahui bahwa dari 3 statistically significant yang paling baik yaitu age, avg_glucose_level, dan hypertensionYes.
+
+```{r}
+model2 <- glm(stroke ~ age+hypertension+avg_glucose_level,family = binomial(link="logit"),training)
+summary(model2)
+```
+__EXPLANATION__
+Tabel setelah dipilih dari 3 statistically significant yang paling baik. 
+
+```{r}
+library(ROCR)
+predictionLogistic <- predict(model2,newdata = validation,type="response")
+evaluation <- prediction(predictionLogistic,validation$stroke)
+prf <- performance(evaluation,measure = "tpr",x.measure="fpr")
+plot(prf)
+```
+__EXPLANATION__
+Dari plot diatas jika true positive rate semakin naik maka akan semakin baik.
+
+```{r}
+auc <- performance(evaluation,measure="auc")
+auc<-auc@y.values[[1]]
+auc
+```
+__EXPLANATION__
+Akurasi regression logictis 84% dari menggunakan validasion set.
+
+```{r}
+trainingDT <- copy(training)
+validationDT <- copy(validation)
+
+trainingDT1 <- trainingDT[1:700,]
+```
+__EXPLANATION__
+700 menyamakan proporsi setiap label yes dan no di dalam stroke.
+
+```{r}
+library(rpart)
+modelDT <- rpart(stroke~.,trainingDT1,method="class", control = rpart.control("minsplit" = 1))
+modelDT
+```
+
+```{r}
+library(rpart.plot)
+rpart.plot(modelDT)
+```
+__EXPLANATION__
+Decision tree akan mengklasifikasikan jumlah tidak stroke terbanyak yaitu sebesar 55% jika age < 57 dan jumlah stroke terbanyak yaitu sebesar 17% jika age > 73, bmi <= 34, dan glucose level > 58.
+
+```{r}
+predictionDT <- predict(modelDT,validationDT,type="class")
+
+cf <- table(predictionDT,validationDT$stroke)
+overallAcc <- sum(diag(cf)) / sum(cf) * 100
+overallAcc
+```
+__EXPLANATION__
+Prediction decision tree menunjukkan akurasi 81%.
+
+```{r}
+confusionMatrix(predictionDT,validationDT$stroke)
+confusionMatrix
+```
+__EXPLANATION__
+Dari confusion matrix kita  dapat mengetahui bahwa prediksi yang salah yaitu 145 dan prediksi yang benar yaitu 621.
+
+```{r}
+modelDT$variable.importance
+```
+__EXPLANATION__
+Variable yang paling berpengaruh dari decision tree yaitu age.
